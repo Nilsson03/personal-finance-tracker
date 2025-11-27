@@ -285,4 +285,4 @@ function formatAmount(amount: number) {
 
 </script>
 
-<style src="./HomePage.css"></style>
+<style src="./HomeStyle.css"></style>
