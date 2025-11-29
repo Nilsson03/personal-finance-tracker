@@ -1,7 +1,6 @@
 <template>
     <div class="home-screen">
-        <v-breadcrumbs class="nav" color="primary"
-            :items="['Главная', 'История трат']" />
+        <v-breadcrumbs class="nav" color="primary" :items="['Главная', 'История трат']" />
 
         <section class="hero">
             <div class="hero__content">
@@ -73,33 +72,39 @@
             <div class="section-header">
                 <div>
                     <h2>Последние операции</h2>
-                    <p>Отображаются шесть последних транзакций для быстрого контроля.</p>
                 </div>
-                <v-btn variant="text" color="primary" rounded="lg" class="history-button">
-                    Вся история (скоро)
-                </v-btn>
             </div>
-
-            <v-row v-if="transactions.length" class="transactions" dense>
-                <v-col v-for="transaction in getLatestTransactions(6)" :key="transaction.id" cols="12" md="6" lg="4">
-                    <v-card class="transaction-card" elevation="2">
-                        <v-card-title class="transaction-card__title">
-                            {{ transaction.category.name }}
-                        </v-card-title>
-                        <v-card-subtitle>
-                            {{ formatDate(transaction.date) }}
-                        </v-card-subtitle>
-                        <v-card-text>
-                            <div class="transaction-card__amount">
-                                {{ formatAmount(transaction.amount) }}
-                            </div>
-                            <div class="transaction-card__meta">
-                                {{ transaction.comment || '' }}
-                            </div>
-                        </v-card-text>
-                    </v-card>
-                </v-col>
-            </v-row>
+            <v-data-table v-if="transactions.length"
+             class="transactions-table"
+             :items="transactions" 
+             :items-per-page="itemsPerPage"
+             item-key="id"
+             :items-length="transactions.length"
+             :headers="tableHeaders"
+             density="comfortable"
+             hover
+             rounded="xl"
+             elevation="2"
+             hide-default-footer>
+                <template v-slot:item="{ item }">
+                    <tr class="transactions-table__row">
+                        <td class="transactions-table__cell transactions-table__cell--date">
+                            <span>{{ formatDate(item.date) }}</span>
+                        </td>
+                        <td class="transactions-table__cell transactions-table__cell--amount">
+                            {{ formatAmount(item.amount) }}
+                        </td>
+                        <td class="transactions-table__cell transactions-table__cell--category">
+                            <v-chip color="primary" variant="tonal" size="small" class="transactions-table__chip">
+                                {{ item.category.name }}
+                            </v-chip>
+                        </td>
+                        <td class="transactions-table__cell transactions-table__cell--comment">
+                            {{ item.comment || 'Не указан' }}
+                        </td>
+                    </tr>
+                </template>
+            </v-data-table>
             <v-alert v-else class="transactions-empty" type="info" variant="tonal" color="primary">
                 Пока нет операций — добавьте первую запись, чтобы увидеть динамику.
             </v-alert>
@@ -149,11 +154,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { reactive, computed, ref } from 'vue'
 import { useTransactionStore } from '@/store/transactionStore'
 
 import type { Category } from '@/type/Category';
-import type { Transaction } from '@/type/Transaction';
 
 const state = reactive({
     openWriteDialog: false,
@@ -165,6 +169,14 @@ const state = reactive({
     balanceDraft: '',
     subtractFromBalance: false,
 })
+
+const itemsPerPage = ref(10)
+const tableHeaders = reactive([
+    { title: 'Дата', key: 'date' },
+    { title: 'Сумма', key: 'amount' },
+    { title: 'Категория', key: 'category' },
+    { title: 'Комментарий', key: 'comment' },
+])
 
 const categoryVariables = reactive([
     'Продукты',
@@ -194,10 +206,6 @@ const categoryCount = computed(() => {
     }
     return new Set(transactions.value.map((transaction) => transaction.category.name)).size
 })
-
-function getLatestTransactions(maxCount: number): Transaction[] {
-    return transactions.value.slice(0, maxCount)
-}
 
 function saveRecorsToStorage() {
     if (!validateReoord()) {
@@ -264,7 +272,7 @@ function validateReoord() {
 }
 
 function findCategoryByName(name: string): Category {
-    return categories.find((category) => category.name === name) || categories[0] 
+    return categories.find((category) => category.name === name) || categories[0]
 }
 
 function formatDate(date: string) {
